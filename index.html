@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Υπηρεσίες των Επαγγελματιών Οδηγών</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 20px; 
+            background-color: #006400; 
+            color: white; 
+        }
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            padding: 15px; 
+            border: 2px solid #004d00; 
+            border-radius: 10px; 
+            background-color: #004d00;
+        }
+        input, button { 
+            margin-top: 10px; 
+            padding: 8px; 
+            width: 90%; 
+            background-color: white; 
+            color: black; 
+            border: none; 
+            border-radius: 5px; 
+        }
+        button { 
+            background-color: #32CD32; 
+            color: white; 
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .document-list { 
+            margin-top: 20px; 
+            text-align: left; 
+            list-style-type: none;
+            padding: 0;
+        }
+        .document-item {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 5px; 
+            background-color: #228B22;
+            margin-bottom: 5px; 
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .document-text {
+            flex-grow: 1;
+            padding-right: 10px;
+        }
+        .edit-btn, .delete-btn {
+            padding: 5px 8px;
+            font-size: 12px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .edit-btn { background-color: #FFD700; color: black; }
+        .delete-btn { background-color: #FF4500; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Υπηρεσίες των Επαγγελματιών Οδηγών</h2>
+        <p>Οργάνωση εγγράφων όπως ασφάλεια, ΚΤΕΟ, άδειες κ.λπ.</p>
+        
+        <h3>Βοηθός Οργάνωσης Εγγράφων</h3>
+        <input type="text" id="docName" placeholder="Όνομα εγγράφου">
+        <input type="date" id="docDate">
+        <button onclick="addDocument()">Προσθήκη</button>
+
+        <h3>Αποθηκευμένα Έγγραφα</h3>
+        <ul id="documentList" class="document-list"></ul>
+    </div>
+
+    <script>
+        function requestNotificationPermission() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        console.log("Ειδοποιήσεις ενεργοποιήθηκαν!");
+                    }
+                });
+            }
+        }
+
+        function addDocument() {
+            let name = document.getElementById("docName").value;
+            let date = document.getElementById("docDate").value;
+            if (name && date) {
+                let docs = JSON.parse(localStorage.getItem("documents")) || [];
+                docs.push({ name, date });
+                localStorage.setItem("documents", JSON.stringify(docs));
+                displayDocuments();
+                document.getElementById("docName").value = "";
+                document.getElementById("docDate").value = "";
+            }
+        }
+
+        function displayDocuments() {
+            let docs = JSON.parse(localStorage.getItem("documents")) || [];
+            let list = document.getElementById("documentList");
+            list.innerHTML = "";
+            docs.forEach((doc, index) => {
+                let li = document.createElement("li");
+                li.className = "document-item";
+                li.innerHTML = `<span class="document-text">${doc.name} - Λήξη: ${doc.date}</span>
+                    <button class="edit-btn" onclick="editDocument(${index})">Επεξεργασία</button>
+                    <button class="delete-btn" onclick="deleteDocument(${index})">Διαγραφή</button>`;
+                list.appendChild(li);
+            });
+            checkForExpiringDocuments();
+        }
+
+        function editDocument(index) {
+            let docs = JSON.parse(localStorage.getItem("documents")) || [];
+            let newName = prompt("Νέο όνομα εγγράφου:", docs[index].name);
+            let newDate = prompt("Νέα ημερομηνία λήξης:", docs[index].date);
+            if (newName && newDate) {
+                docs[index] = { name: newName, date: newDate };
+                localStorage.setItem("documents", JSON.stringify(docs));
+                displayDocuments();
+            }
+        }
+
+        function deleteDocument(index) {
+            let docs = JSON.parse(localStorage.getItem("documents")) || [];
+            if (confirm("Είσαι σίγουρος ότι θέλεις να διαγράψεις αυτό το έγγραφο;")) {
+                docs.splice(index, 1);
+                localStorage.setItem("documents", JSON.stringify(docs));
+                displayDocuments();
+            }
+        }
+
+        function checkForExpiringDocuments() {
+            let docs = JSON.parse(localStorage.getItem("documents")) || [];
+            let today = new Date();
+            docs.forEach(doc => {
+                let expiryDate = new Date(doc.date);
+                let diffDays = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                if (diffDays <= 7 && diffDays >= 0) {
+                    showNotification(doc.name, doc.date);
+                }
+            });
+        }
+
+        function showNotification(name, date) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Ειδοποίηση Λήξης Εγγράφου", {
+                    body: `Το έγγραφο "${name}" λήγει στις ${date}.`,
+                    icon: "https://cdn-icons-png.flaticon.com/512/1827/1827348.png"
+                });
+            }
+        }
+
+        window.onload = () => {
+            requestNotificationPermission();
+            displayDocuments();
+        };
+    </script>
+</body>
+</html>
